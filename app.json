@@ -1,0 +1,24 @@
+{
+  "name": "Bilancio Processor MVP",
+  "description": "Web app privata per elaborazione bilancini di verifica",
+  "repository": "https://github.com/tuousername/bilancio-processor",
+  "logo": "",
+  "keywords": ["python", "flask", "pdf", "accounting"],
+  "env": {
+    "SECRET_KEY": {
+      "description": "Secret key for Flask sessions",
+      "generator": "secret"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+# 🚀 QUICK START - 3 PASSI SEMPLICI
+
+## 📥 SCARICA TUTTO
+
+[**Clicca qui per scaricare la cartella webapp_secure**](computer:///mnt/user-data/outputs/webapp_secure)
+
+---
+
+## ✨ COSA TROVI NELLA CARTELLA
+
+```
+webapp_secure/
+├─ 📄 app.py                    (Il server con tutto il codice)
+├─ 📄 Procfile                  (Config per Heroku)
+├─ 📄 requirements.txt          (Librerie Python)
+├─ 📄 runtime.txt               (Versione Python)
+├─ 📖 DEPLOY_GUIDE.md           (Guida completa)
+├─ 📺 VIDEO_TUTORIAL.md         (Tutorial passo-passo)
+└─ 📄 LEGGI_QUI.txt             (Questo file!)
+```
+
+---
+
+## 🎯 3 PASSI PER METTERLA ONLINE
+
+### PASSO 1: CREA ACCOUNT HEROKU
+👉 Vai su: **https://signup.heroku.com/**
+- È gratis
+- Ci vogliono 2 minuti
+
+### PASSO 2: INSTALLA HEROKU CLI
+👉 Scarica da: **https://devcenter.heroku.com/articles/heroku-cli**
+- Esegui l'installer
+- Segui le istruzioni (tutto automatico)
+
+### PASSO 3: SEGUI IL VIDEO_TUTORIAL.md
+👉 Apri il file **VIDEO_TUTORIAL.md** in questa cartella
+- Copia e incolla i comandi nel terminale
+- In 10 minuti la tua app è online!
+
+---
+
+## 🔐 CREDENZIALI DI ACCESSO
+
+**Username**: `admin`
+**Password**: `BilancioMVP2024!`
+
+⚠️ **IMPORTANTE**: Cambia queste credenziali subito!
+(Istruzioni nel DEPLOY_GUIDE.md)
+
+---
+
+## 💡 NON SEI PRATICO DI TECNOLOGIA?
+
+**NO PROBLEM!** 
+
+Ho preparato:
+1. ✅ **VIDEO_TUTORIAL.md** - Guida visiva passo-passo con screenshot testuali
+2. ✅ **DEPLOY_GUIDE.md** - Spiegazioni dettagliate di ogni comando
+3. ✅ Comandi già pronti da copiare e incollare
+
+**Basta seguire le istruzioni, non serve sapere programmare!**
+
+---
+
+## 🆘 SERVE AIUTO?
+
+Se qualcosa non funziona:
+1. Leggi la sezione "TROUBLESHOOTING" in DEPLOY_GUIDE.md
+2. Usa il comando: `heroku logs --tail` per vedere gli errori
+3. Google è tuo amico: cerca "heroku deploy flask"
+
+---
+
+## ✨ COSA OTTERRAI
+
+Dopo il deploy avrai:
+
+✅ Una web app online 24/7
+✅ Accessibile da: https://tuo-nome-app.herokuapp.com
+✅ Protetta con login e password
+✅ HTTPS sicuro (SSL)
+✅ Upload PDF → Download Excel automatico
+✅ Design professionale e responsive
+✅ Funziona su PC, tablet, smartphone
+
+**COSTO: 0€** (gratis con Heroku)
+
+---
+
+## 🎓 FILE DA LEGGERE IN ORDINE
+
+1. **Questo file** (LEGGI_QUI.txt) ✓
+2. **VIDEO_TUTORIAL.md** (segui passo-passo)
+3. **DEPLOY_GUIDE.md** (se serve più info)
+
+---
+
+## ⚡ INIZIA SUBITO
+
+1. Apri il **VIDEO_TUTORIAL.md**
+2. Leggi e segui ogni "SCENA"
+3. In 10 minuti sei online!
+
+---
+
+**🚀 Buon deploy!**
+
+P.S. Non preoccuparti se sembra complicato - è molto più semplice di quanto sembri! 😊
