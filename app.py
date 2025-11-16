@@ -21,7 +21,7 @@ ALLOWED_EXTENSIONS = {'pdf', 'xlsx', 'xls'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# Credenziali (versione semplificata senza hash)
+# Credenziali
 VALID_USERNAME = 'admin'
 VALID_PASSWORD = 'BilancioMVP2024!'
 
@@ -37,51 +37,149 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_bilancio_from_pdf(pdf_path):
-    """Estrae dati dal PDF del bilancino di verifica"""
+    """Estrae dati dal PDF - versione robusta"""
     data = []
     
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            if not text:
-                continue
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                # Prova prima con le tabelle
+                tables = page.extract_tables()
+                if tables:
+                    for table in tables:
+                        for row in table:
+                            if not row or len(row) < 2:
+                                continue
+                            
+                            # Cerca valori numerici nella riga
+                            amounts = []
+                            for cell in row:
+                                if cell:
+                                    # Cerca numeri con separatori
+                                    matches = re.findall(r'[\d.,]+', str(cell))
+                                    for match in matches:
+                                        try:
+                                            # Prova a convertire in numero
+                                            if ',' in match and '.' in match:
+                                                # Formato italiano: 1.234,56
+                                                num = float(match.replace('.', '').replace(',', '.'))
+                                            elif ',' in match:
+                                                # Formato italiano: 1234,56
+                                                num = float(match.replace(',', '.'))
+                                            else:
+                                                # Formato standard: 1234.56
+                                                num = float(match.replace(',', ''))
+                                            
+                                            if abs(num) > 0.01:  # Ignora valori troppo piccoli
+                                                amounts.append(num)
+                                        except:
+                                            continue
+                            
+                            if amounts:
+                                # Prendi il primo elemento come codice/descrizione
+                                first_cell = str(row[0]) if row[0] else ''
+                                
+                                # Cerca codice conto (numeri all'inizio)
+                                code_match = re.match(r'^(\d+)', first_cell)
+                                code = code_match.group(1) if code_match else ''
+                                
+                                # Descrizione
+                                if code:
+                                    description = first_cell[len(code):].strip()
+                                else:
+                                    description = ' '.join([str(cell) for cell in row[:-1] if cell]).strip()
+                                
+                                # Determina tipo (SP/CE) basato sul codice
+                                tipo = 'Stato Patrimoniale'
+                                if code:
+                                    first_digit = code[0]
+                                    if first_digit in ['5', '6', '7', '8', '9']:
+                                        tipo = 'Conto Economico'
+                                
+                                # Usa l'ultimo importo trovato
+                                amount = amounts[-1]
+                                
+                                if description or code:
+                                    data.append({
+                                        'Codice': code,
+                                        'Descrizione': description[:100],  # Limita lunghezza
+                                        'Tipo': tipo,
+                                        'Amount': amount
+                                    })
                 
-            lines = text.split('\n')
-            
-            for line in lines:
-                line = line.strip()
-                if not line or len(line) < 10:
-                    continue
-                
-                # Pattern per identificare righe con conti
-                amount_match = re.search(r'([\d.,]+)\s*$', line)
-                if amount_match:
-                    amount_str = amount_match.group(1)
-                    amount = float(amount_str.replace('.', '').replace(',', '.'))
-                    
-                    # Estrai codice conto
-                    code_match = re.match(r'^(\d+)', line)
-                    if code_match:
-                        code = code_match.group(1)
+                # Se non ci sono tabelle, prova con il testo
+                if not tables:
+                    text = page.extract_text()
+                    if text:
+                        lines = text.split('\n')
                         
-                        # Descrizione è tutto tra il codice e l'importo
-                        desc_start = len(code)
-                        desc_end = amount_match.start()
-                        description = line[desc_start:desc_end].strip()
-                        
-                        # Determina se SP o CE
-                        tipo = 'Stato Patrimoniale'
-                        if code.startswith(('5', '6', '7', '8', '9')):
-                            tipo = 'Conto Economico'
-                        
-                        data.append({
-                            'Codice': code,
-                            'Descrizione': description,
-                            'Tipo': tipo,
-                            'Amount': amount
-                        })
-    
-    return pd.DataFrame(data)
+                        for line in lines:
+                            line = line.strip()
+                            if len(line) < 5:
+                                continue
+                            
+                            # Cerca importi nella riga
+                            amounts = []
+                            amount_matches = re.finditer(r'([\d.,]+)', line)
+                            
+                            for match in amount_matches:
+                                try:
+                                    amount_str = match.group(1)
+                                    # Conversione tollerante
+                                    if ',' in amount_str and '.' in amount_str:
+                                        num = float(amount_str.replace('.', '').replace(',', '.'))
+                                    elif ',' in amount_str:
+                                        num = float(amount_str.replace(',', '.'))
+                                    else:
+                                        num = float(amount_str)
+                                    
+                                    if abs(num) > 0.01:
+                                        amounts.append((num, match.start()))
+                                except:
+                                    continue
+                            
+                            if amounts:
+                                # Prendi l'ultimo importo
+                                amount, pos = amounts[-1]
+                                
+                                # Tutto prima dell'importo è codice + descrizione
+                                text_part = line[:pos].strip()
+                                
+                                # Cerca codice
+                                code_match = re.match(r'^(\d+)', text_part)
+                                code = code_match.group(1) if code_match else ''
+                                
+                                # Descrizione
+                                if code:
+                                    description = text_part[len(code):].strip()
+                                else:
+                                    description = text_part
+                                
+                                # Determina tipo
+                                tipo = 'Stato Patrimoniale'
+                                if code and code[0] in ['5', '6', '7', '8', '9']:
+                                    tipo = 'Conto Economico'
+                                
+                                if description or code:
+                                    data.append({
+                                        'Codice': code,
+                                        'Descrizione': description[:100],
+                                        'Tipo': tipo,
+                                        'Amount': amount
+                                    })
+        
+        # Rimuovi duplicati
+        df = pd.DataFrame(data)
+        if not df.empty:
+            df = df.drop_duplicates(subset=['Codice', 'Descrizione'], keep='first')
+            # Ordina per codice
+            df = df.sort_values('Codice', na_position='last')
+        
+        return df
+        
+    except Exception as e:
+        print(f"Errore nell'estrazione: {str(e)}")
+        return pd.DataFrame()
 
 def create_excel_output(df, output_path):
     """Crea file Excel con 3 sheets"""
@@ -104,6 +202,12 @@ def create_excel_output(df, output_path):
     for _, row in df.iterrows():
         ws1.append([row['Codice'], row['Descrizione'], row['Tipo'], row['Amount']])
     
+    # Formattazione colonne
+    ws1.column_dimensions['A'].width = 12
+    ws1.column_dimensions['B'].width = 50
+    ws1.column_dimensions['C'].width = 20
+    ws1.column_dimensions['D'].width = 15
+    
     # Sheet 2: Mapping
     ws2 = wb.create_sheet("Mapping")
     mapping_headers = ['Codice', 'Descrizione', 'Tipo', 'Amount', 'Cluster I', 'Cluster II']
@@ -117,19 +221,43 @@ def create_excel_output(df, output_path):
     for _, row in df.iterrows():
         ws2.append([row['Codice'], row['Descrizione'], row['Tipo'], row['Amount'], '', ''])
     
+    # Formattazione colonne
+    ws2.column_dimensions['A'].width = 12
+    ws2.column_dimensions['B'].width = 50
+    ws2.column_dimensions['C'].width = 20
+    ws2.column_dimensions['D'].width = 15
+    ws2.column_dimensions['E'].width = 25
+    ws2.column_dimensions['F'].width = 30
+    
     # Sheet 3: Headline
     ws3 = wb.create_sheet("Headline")
+    
     ws3.append(["STATO PATRIMONIALE"])
+    ws3['A1'].font = Font(bold=True, size=14)
     ws3.append([])
     ws3.append(["Voce", "Importo"])
+    
+    # Header
+    for cell in ws3[3]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+    
+    ws3.append([])
+    ws3.append([])
     
     ws3.append(["CONTO ECONOMICO"])
+    ws3['A6'].font = Font(bold=True, size=14)
     ws3.append([])
     ws3.append(["Voce", "Importo"])
     
-    # Formatta Headline
-    ws3['A1'].font = Font(bold=True, size=14)
-    ws3['A4'].font = Font(bold=True, size=14)
+    # Header
+    for cell in ws3[8]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+    
+    # Formattazione colonne
+    ws3.column_dimensions['A'].width = 40
+    ws3.column_dimensions['B'].width = 15
     
     # Salva
     wb.save(output_path)
@@ -146,7 +274,6 @@ def login():
         username = request.form.get('username', '')
         password = request.form.get('password', '')
         
-        # Verifica credenziali (comparazione diretta)
         if username == VALID_USERNAME and password == VALID_PASSWORD:
             session['logged_in'] = True
             session['username'] = username
@@ -194,7 +321,7 @@ def upload_file():
             return jsonify({'success': False, 'error': 'Formato Excel non ancora supportato'})
         
         if df.empty:
-            return jsonify({'success': False, 'error': 'Impossibile estrarre dati dal file'})
+            return jsonify({'success': False, 'error': 'Impossibile estrarre dati dal file. Verifica che sia un bilancino di verifica valido.'})
         
         output_filename = f"elaborato_{file_id.replace('.pdf', '.xlsx')}"
         output_path = os.path.join(OUTPUT_FOLDER, output_filename)
@@ -219,7 +346,7 @@ def upload_file():
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': f'Errore durante elaborazione: {str(e)}'})
 
 @app.route('/download/<file_id>')
 @login_required
